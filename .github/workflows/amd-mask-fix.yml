@@ -52,12 +52,6 @@ jobs:
           restore-keys: |
             cpm-windows-x86_64-pgo-v2-
 
-      # Upstream code trips -Werror=shadow under MSYS2's clang (gpu_split.h); warnings stay
-      # warnings here, the code is unchanged.
-      - name: Keep warnings as warnings
-        shell: bash
-        run: sed -i '/-Werror=/d' src/CMakeLists.txt && ! grep -n -- '-Werror=' src/CMakeLists.txt
-
       - name: Configure MinGW PGO
         shell: msys2 {0}
         run: |
@@ -80,6 +74,7 @@ jobs:
             -DLICHII_BUILD_PLATFORM=windows-x86_64-pgo \
             -DUSE_DISCORD_PRESENCE=OFF \
             -DUSE_CCACHE=ON \
+            -DENABLE_WERROR=OFF \
             -DCMAKE_C_COMPILER=clang \
             -DCMAKE_CXX_COMPILER=clang++ \
             -DCMAKE_EXE_LINKER_FLAGS=-fuse-ld=lld \
