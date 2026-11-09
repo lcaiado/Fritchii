@@ -77,13 +77,28 @@ jobs:
             -DENABLE_WERROR=OFF \
             -DCMAKE_C_COMPILER=clang \
             -DCMAKE_CXX_COMPILER=clang++ \
-            -DCMAKE_EXE_LINKER_FLAGS=-fuse-ld=lld \
+            "-DCMAKE_EXE_LINKER_FLAGS=-fuse-ld=lld -ldwmapi" \
             "-DCMAKE_C_FLAGS=$profile" \
             "-DCMAKE_CXX_FLAGS=$profile"
+
+      - name: Restore compiler objects
+        uses: actions/cache/restore@v5
+        with:
+          path: .ccache
+          key: objects-amd-mask-fix-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            objects-amd-mask-fix-
 
       - name: Build MinGW PGO
         shell: msys2 {0}
         run: cmake --build build/release --target yuzu yuzu-cmd --parallel
+
+      - name: Save compiler objects
+        if: always()
+        uses: actions/cache/save@v5
+        with:
+          path: .ccache
+          key: objects-amd-mask-fix-${{ github.run_id }}-${{ github.run_attempt }}
 
       - name: Package MinGW binary
         shell: msys2 {0}
