@@ -3735,7 +3735,7 @@ void RasterizerVulkan::UpdateDynamicStates(GraphicsPipeline* draw_pipeline) {
     }
 
     if (device.IsExtExtendedDynamicState3BlendingSupported()) {
-        UpdateBlending(regs);
+        UpdateBlending(regs, draw_pipeline);
     } else if (device.IsExtColorWriteEnableSupported()) {
         UpdateColorWriteEnable(regs);
     }
@@ -4378,12 +4378,18 @@ void RasterizerVulkan::UpdateLogicOp(Tegra::Engines::Maxwell3D::Regs& regs) {
     scheduler.Record([op](vk::CommandBuffer cmdbuf) { cmdbuf.SetLogicOpEXT(op); });
 }
 
-void RasterizerVulkan::UpdateBlending(Tegra::Engines::Maxwell3D::Regs& regs) {
-    if (!state_tracker.TouchBlending()) {
+void RasterizerVulkan::UpdateBlending(Tegra::Engines::Maxwell3D::Regs& regs,
+                                      const GraphicsPipeline* pipeline) {
+    // The write mask also leaves out render targets the fragment shader doesn't write, so it is
+    // recorded again whenever the bound pipeline writes a different set (zortos293/Lichii#353).
+    const u32 color_output_mask = pipeline ? pipeline->ColorOutputMask() : ~0U;
+    const bool color_output_changed = color_output_mask != last_color_output_mask;
+    if (!state_tracker.TouchBlending() && !color_output_changed) {
         return;
     }
 
-    if (state_tracker.TouchColorMask()) {
+    if (state_tracker.TouchColorMask() || color_output_changed) {
+        last_color_output_mask = color_output_mask;
         std::array<VkColorComponentFlags, Maxwell::NumRenderTargets> setup_masks{};
         for (size_t index = 0; index < Maxwell::NumRenderTargets; index++) {
             const auto& mask = regs.color_mask[regs.color_mask_common ? 0 : index];
@@ -4400,6 +4406,7 @@ void RasterizerVulkan::UpdateBlending(Tegra::Engines::Maxwell3D::Regs& regs) {
             if (mask.A) {
                 current |= VK_COLOR_COMPONENT_A_BIT;
             }
+            current &= (color_output_mask >> (index * 4)) & 0xF;
         }
         scheduler.Record([setup_masks](vk::CommandBuffer cmdbuf) {
             cmdbuf.SetColorWriteMaskEXT(0, setup_masks);

@@ -522,6 +522,14 @@ GraphicsPipeline::GraphicsPipeline(
         num_descriptor_entries += NumDescriptorEntries(*info);
     }
     fragment_has_color0_output = stage_infos[NUM_STAGES - 1].stores_frag_color[0];
+    // lcaiado: port of zortos293/Lichii#353 without frag_color_components (Info and the kept
+    // cache stay the same). Vulkan leaves render targets the fragment shader never writes
+    // undefined and AMD writes garbage there (lines along OoT's mountain ridges): mask them out.
+    for (size_t rt = 0; rt < Maxwell::NumRenderTargets; ++rt) {
+        if (stage_infos[NUM_STAGES - 1].stores_frag_color[rt]) {
+            color_output_mask |= u32{0xF} << (rt * 4);
+        }
+    }
     const auto any_written = [](const auto& descriptors) {
         return std::ranges::any_of(descriptors, [](const auto& desc) { return desc.is_written; });
     };
@@ -2100,6 +2108,7 @@ void GraphicsPipeline::FillStates(PipelineStates& s) const {
         for (size_t i = 0; i < mask_table.size(); ++i) {
             write_mask |= mask[i] ? mask_table[i] : 0;
         }
+        write_mask &= ColorOutputMask(index);
         cb_attachments.push_back({
             .blendEnable = blend.enable != 0,
             .srcColorBlendFactor = MaxwellToVK::BlendFactor(blend.SourceRGBFactor()),
