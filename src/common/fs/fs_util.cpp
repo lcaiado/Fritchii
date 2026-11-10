@@ -9,7 +9,33 @@
 #include "common/fs/fs_util.h"
 #include <ranges>
 
+#ifdef _WIN32
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
+#endif
+
 namespace Common::FS {
+
+s64 FileWriteTicks(const std::filesystem::path& path, std::error_code& error) {
+    error.clear();
+#ifdef _WIN32
+    WIN32_FILE_ATTRIBUTE_DATA data{};
+    if (!GetFileAttributesExW(path.c_str(), GetFileExInfoStandard, &data)) {
+        error = std::error_code(static_cast<int>(GetLastError()), std::system_category());
+        return 0;
+    }
+    return static_cast<s64>((static_cast<u64>(data.ftLastWriteTime.dwHighDateTime) << 32) |
+                            data.ftLastWriteTime.dwLowDateTime);
+#else
+    const auto time = std::filesystem::last_write_time(path, error);
+    return error ? 0 : static_cast<s64>(time.time_since_epoch().count());
+#endif
+}
 
 std::u8string ToU8String(std::string_view utf8_string) {
     return std::u8string{utf8_string.begin(), utf8_string.end()};

@@ -3032,12 +3032,12 @@ std::optional<WarmStamp> CurrentStamp(const std::filesystem::path& file, const D
     if (ec) {
         return std::nullopt;
     }
-    const auto time = std::filesystem::last_write_time(file, ec);
+    const s64 time = Common::FS::FileWriteTicks(file, ec);
     if (ec) {
         return std::nullopt;
     }
     return WarmStamp{size,
-                     static_cast<s64>(time.time_since_epoch().count()),
+                     time,
                      entries,
                      device.GetDriverVersion(),
                      device.GetDeviceID(),
@@ -3672,7 +3672,7 @@ void PipelineCache::PreparePrecompiled(const std::filesystem::path& base_dir,
         }
         return;
     }
-    const auto modified = std::filesystem::last_write_time(path, error).time_since_epoch().count();
+    const auto modified = Common::FS::FileWriteTicks(path, error);
     // The driver keeps what it compiled; the step runs again for another file, driver, GPU or
     // release. The release version, not the commit (2026-11-09, owner): every dev build re-ran the
     // ~20 minute preparation. A translator change inside a release only costs a few runtime

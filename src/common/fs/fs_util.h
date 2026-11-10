@@ -10,7 +10,18 @@
 
 #include "common/common_types.h"
 
+#include <system_error>
+
 namespace Common::FS {
+
+/**
+ * Last write time of a file as a raw tick count. On Windows this is the FILETIME value
+ * (100 ns ticks since 1601, UTC) read straight from the file system, so it does not depend on
+ * which C++ library the build links: newer MinGW libstdc++ reports whole seconds from another
+ * epoch, which changed every prepared shader cache stamp written by the release builds.
+ */
+[[nodiscard]] s64 FileWriteTicks(const std::filesystem::path& path, std::error_code& error);
+
 
 template <typename T>
 concept IsChar = std::same_as<T, char>;

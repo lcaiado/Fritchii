@@ -17,6 +17,7 @@
 #endif
 
 #include "common/cityhash.h"
+#include "common/fs/fs_util.h"
 #include "common/zstd_compression.h"
 #include "shader_recompiler/info_serialize.h"
 #include "shader_recompiler/shader_info.h"
@@ -127,8 +128,7 @@ u64 SampleSeed() {
     const u64 size = exe.empty() ? 0 : std::filesystem::file_size(exe, error);
     const s64 modified =
         exe.empty() ? 0
-                    : static_cast<s64>(
-                          std::filesystem::last_write_time(exe, error).time_since_epoch().count());
+                    : Common::FS::FileWriteTicks(exe, error);
     const std::array<u64, 2> identity{size, static_cast<u64>(modified)};
     return Common::CityHash64(reinterpret_cast<const char*>(identity.data()), sizeof(identity));
 }

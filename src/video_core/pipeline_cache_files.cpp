@@ -7,6 +7,7 @@
 #include <utility>
 #include <vector>
 
+#include "common/fs/fs_util.h"
 #include "video_core/pipeline_cache_files.h"
 
 namespace VideoCommon {
@@ -312,13 +313,13 @@ std::optional<PipelineCacheFileStamp> StampPipelineCacheFile(const std::filesyst
     if (error) {
         return std::nullopt;
     }
-    const auto modified = std::filesystem::last_write_time(file, error);
+    const s64 modified = Common::FS::FileWriteTicks(file, error);
     if (error) {
         return std::nullopt;
     }
     return PipelineCacheFileStamp{
         .size = size,
-        .modified = static_cast<s64>(modified.time_since_epoch().count()),
+        .modified = modified,
     };
 }
 

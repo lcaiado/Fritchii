@@ -18,6 +18,7 @@
 #include <fmt/format.h>
 
 #include "common/cityhash.h"
+#include "common/fs/fs_util.h"
 #include "common/fs/path_util.h"
 #include "common/logging.h"
 #include "core/file_sys/nx2_shader_extract.h"
@@ -36,11 +37,11 @@ std::string FileStamp(const std::filesystem::path& path) {
     if (error) {
         return {};
     }
-    const auto time = std::filesystem::last_write_time(path, error);
+    const s64 time = Common::FS::FileWriteTicks(path, error);
     if (error) {
         return {};
     }
-    return fmt::format("{} {}", size, time.time_since_epoch().count());
+    return fmt::format("{} {}", size, time);
 }
 
 /// <file>.recipe.txt: the recipe a precompiled file was assembled from, by its size and the
